@@ -27,13 +27,26 @@ function imageOptions(value: unknown, pattern: RegExp) {
   return Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === "string" && item.length <= 64 && item === item.trim() && pattern.test(item)))] : undefined;
 }
 
+// ACT: 默认模型按媒体类型各存一份，选择已失效（模型或供应商被删）时不标记，由调用方回退到列表首个。
+function defaultMediaModels() {
+  const defaults = record(record(conf.get("settings", {})).defaultMediaModels);
+  return new Map(Object.entries(defaults).flatMap(([type, value]) => {
+    const item = record(value);
+    return typeof item.providerId === "string" && typeof item.modelId === "string"
+      ? [[type, { providerId: item.providerId, modelId: item.modelId }] as const] : [];
+  }));
+}
+
 export async function listMediaModels(): Promise<MediaModel[]> {
   const installedProviders = await listMediaProviders();
+  const defaults = defaultMediaModels();
   return installedProviders.flatMap(provider => provider.models.flatMap(model => {
     if (model.type !== "image" && model.type !== "video" && model.type !== "audio") return [];
     const builtIn = (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === model.id);
+    const fallback = defaults.get(model.type);
     return [{
       providerId: provider.id, providerLabel: provider.label, modelId: model.id, label: model.label, type: model.type,
+      isDefault: fallback?.providerId === provider.id && fallback.modelId === model.id,
       mode: model.mode, durationResolutionMap: model.durationResolutionMap, audio: model.audio,
       ...(model.type === "audio" ? { voices: model.voices } : {}),
       ...(model.type === "image" ? {

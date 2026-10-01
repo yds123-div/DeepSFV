@@ -38,10 +38,11 @@
       :zoomOnPinch="active && !settingsVisible"
       :panOnScroll="active && !settingsVisible"
       :panOnScrollSpeed="1"
-      :panOnDrag="handMode ? true : [1]"
+      :panOnDrag="[0, 1]"
       :panOnScrollMode="PanOnScrollMode.Free"
       :delete-key-code="null"
-      :selectionKeyCode="!handMode"
+      :selectionKeyCode="boxSelectKeyPressed ? true : null"
+      :paneClickDistance="paneClickDistance"
       :selectionMode="SelectionMode.Partial"
       :multi-selection-key-code="null"
       :zoomActivationKeyCode="zoomKeyPressed ? true : null"
@@ -206,8 +207,10 @@ let loadRequest = 0;
 const snapEnabled = ref(false);
 const zoomKeyPressed = ref(false);
 const panKeyPressed = ref(false);
-const selectedTool = ref<"move" | "hand">("move");
-const handMode = computed(() => props.active && !props.settingsVisible && (selectedTool.value === "hand" || panKeyPressed.value));
+const boxSelectKeyPressed = ref(false);
+// ACT: 4px 只放宽「算不算点击」的判定；d3-zoom 没有平移起始阈值，阈值内的画布位移无法避免。
+const paneClickDistance = 4;
+const handMode = computed(() => props.active && !props.settingsVisible && panKeyPressed.value);
 let pointerPosition: XYPosition | undefined;
 const pressedCodes = new Set<string>();
 let gestureScale: number | undefined;
@@ -706,13 +709,15 @@ function updateCanvasKeys(event: KeyboardEvent) {
     !target.closest("[role='dialog'], #agentPanel") &&
     (target === document.body || target === document.documentElement || canvasElement.value?.contains(target));
   zoomKeyPressed.value = !event.isComposing && shortcutPressed(event, shortcuts.zoom, pressedCodes);
+  // 与缩放修饰键一样不受输入框聚焦影响，避免焦点在输入框与画布之间移动时状态滞留。
+  boxSelectKeyPressed.value = !event.isComposing && shortcutPressed(event, shortcuts.boxSelect, pressedCodes);
   const editing =
     !(target instanceof Element) ||
     !!target.closest("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='slider']");
   panKeyPressed.value = !!inCanvas && !editing && !event.isComposing && shortcutPressed(event, shortcuts.pan, pressedCodes);
   if (event.type === "keyup" || event.defaultPrevented || event.isComposing || !inCanvas || editing) return;
   const action = ([
-    "group", "mergeGroup", "ungroup", "addNode", "moveTool", "handTool", "arrange", "search",
+    "group", "mergeGroup", "ungroup", "addNode", "arrange", "search",
     "delete", "paste", "undo", "redo", "zoomIn", "zoomOut", "fitView",
   ] as const).find((action) =>
     shortcutMatches(event, shortcuts[action])
@@ -744,7 +749,6 @@ function updateCanvasKeys(event: KeyboardEvent) {
   else if (action === "group" || action === "mergeGroup" || action === "ungroup") {
     void selectionToolbarRef.value?.operate(action);
   } else if (action === "addNode") addNodeAtPointer();
-  else if (action === "moveTool" || action === "handTool") selectedTool.value = action === "handTool" ? "hand" : "move";
   else if (action === "arrange") void canvasControlsRef.value?.arrangeNodes();
   else if (action === "search") nodeSearchRef.value?.open();
   else void flow[action]();
@@ -756,6 +760,7 @@ function resetCanvasKeys() {
   nativePasteRequested = false;
   zoomKeyPressed.value = false;
   panKeyPressed.value = false;
+  boxSelectKeyPressed.value = false;
 }
 
 watch([() => props.settingsVisible, () => generalSettings.value.canvasShortcuts], resetCanvasKeys, { deep: true, flush: "sync" });
@@ -924,12 +929,15 @@ const defaultEdgeOptions = markRaw({
   }
 
   &.handMode :deep(.vue-flow__transformationpane),
-  &.handMode :deep(.vue-flow__transformationpane *) {
+  &.handMode :deep(.vue-flow__transformationpane *),
+  // 选区矩形不在 transformationpane 内，不覆盖它会让「按住空格拖动画布」在选区上方失效。
+  &.handMode :deep(.vue-flow__nodesselection-rect) {
     pointer-events: none !important;
   }
 
-  &.handMode :deep(.vue-flow__pane) {
-    cursor: grab;
+  // 平移光标由 Vue Flow 依 panOnDrag 自动给出，仅覆盖框选状态的十字光标。
+  :deep(.vue-flow__pane.selection) {
+    cursor: crosshair;
   }
 
   &.edgesHidden :deep(.vue-flow__edges) {

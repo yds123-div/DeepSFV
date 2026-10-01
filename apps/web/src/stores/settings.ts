@@ -73,6 +73,27 @@ export function updateGeneralSettings(patch: Partial<typeof generalSettings.valu
   settings.value = { ...settings.value, general: { ...(current && typeof current === "object" && !Array.isArray(current) ? current : {}), ...patch } };
 }
 
+export const mediaModelTypes = ["image", "video", "audio"] as const;
+export type MediaModelType = typeof mediaModelTypes[number];
+export type MediaModelChoice = { providerId: string; modelId: string };
+export const defaultMediaModels = computed(() => {
+  const raw = settings.value.defaultMediaModels;
+  const defaults = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+  return Object.fromEntries(mediaModelTypes.flatMap(type => {
+    const rawChoice = defaults[type];
+    const choice = rawChoice && typeof rawChoice === "object" && !Array.isArray(rawChoice) ? rawChoice as Record<string, unknown> : {};
+    return typeof choice.providerId === "string" && typeof choice.modelId === "string"
+      ? [[type, { providerId: choice.providerId, modelId: choice.modelId } as MediaModelChoice] as const] : [];
+  })) as Partial<Record<MediaModelType, MediaModelChoice>>;
+});
+
+export function updateDefaultMediaModel(type: MediaModelType, choice: MediaModelChoice | undefined) {
+  const next = { ...defaultMediaModels.value };
+  if (choice) next[type] = choice;
+  else delete next[type];
+  settings.value = { ...settings.value, defaultMediaModels: next };
+}
+
 export const privacySettings = computed(() => {
   const raw = settings.value.privacy;
   const privacy = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};

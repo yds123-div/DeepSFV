@@ -35,16 +35,35 @@
         <el-form-item label="推理等级">
           <el-segmented v-model="reasoningEffort" :options="reasoningOptions" :disabled="disabled" block aria-label="推理等级" />
         </el-form-item>
+        <el-form-item v-for="type in mediaModelTypes" :key="type" :label="`默认${mediaModelLabels[type]}`">
+          <el-select
+            :modelValue="mediaModelSelectValue(type)"
+            filterable
+            clearable
+            :disabled="disabled"
+            :teleported="false"
+            :placeholder="isMediaModelExpired(type) ? '原选择已失效，请重选' : `选择${mediaModelLabels[type]}`"
+            :aria-label="`默认${mediaModelLabels[type]}`"
+            noDataText="请先添加供应商和模型"
+            @update:modelValue="(value: string) => setDefaultMediaModel(type, value)">
+            <el-option-group v-for="provider in mediaGroups(type)" :key="provider.id" :label="provider.label">
+              <el-option v-for="item in provider.models" :key="item.modelId" :label="item.label" :value="JSON.stringify([item.providerId, item.modelId])" />
+            </el-option-group>
+          </el-select>
+        </el-form-item>
       </el-form>
     </el-popover>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { ElMessage } from "element-plus";
 import { IconChevronDown } from "@tabler/icons-vue";
 import { modelIcon } from "@toonflow/model-icons";
-import { customProviders, modelChoices } from "@/stores/settings";
+import { groupNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
+import { customProviders, modelChoices, mediaModelTypes, type MediaModelType } from "@/stores/settings";
+import { loadMediaModelOptions, mediaModelLabels, mediaModelOptionsOf, mediaModelSelectValue, isMediaModelExpired, setDefaultMediaModel } from "@/lib/mediaModels";
 
 const selectedModel = defineModel<string>({ default: "" });
 const reasoningEffort = defineModel<string>("reasoningEffort", { default: "" });
@@ -59,6 +78,13 @@ const reasoningOptions = [
 const modelGroups = computed(() => customProviders.value.toSorted((left, right) => Number(right.id === "tfRouter") - Number(left.id === "tfRouter")));
 const selectedModelChoice = computed(() => modelChoices.value.find(item => item.value === selectedModel.value));
 const reasoningLabel = computed(() => reasoningOptions.find(item => item.value === reasoningEffort.value)?.label ?? "默认");
+function mediaGroups(type: MediaModelType) {
+  return groupNodeModels(mediaModelOptionsOf(type));
+}
+
+onMounted(() => {
+  void loadMediaModelOptions().catch(() => ElMessage.error("读取媒体模型失败"));
+});
 watch(selectedModel, () => { reasoningEffort.value = ""; });
 watch(modelChoices, items => {
   if (!selectedModel.value) selectedModel.value = items[0]?.value ?? "";

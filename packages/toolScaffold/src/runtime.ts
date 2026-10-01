@@ -76,6 +76,7 @@ export interface MediaModel {
   modelId: string;
   label: string;
   type: "image" | "video" | "audio";
+  isDefault?: boolean;
   mode?: unknown;
   imageSizes?: string[];
   imageRatios?: string[];

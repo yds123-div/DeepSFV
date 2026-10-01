@@ -78,6 +78,42 @@
     }
   }
 
+  .defaultModels {
+    margin-bottom: 16px;
+
+    .defaultHeader {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 12px;
+
+      .el-text {
+        line-height: 1.5;
+      }
+    }
+
+    .defaultRow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .defaultLabel {
+        flex: 0 0 72px;
+        color: var(--el-text-color-regular);
+        font-size: var(--el-font-size-base);
+      }
+
+      .el-select {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+  }
+
   .providerActions {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

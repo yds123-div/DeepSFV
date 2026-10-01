@@ -1,5 +1,26 @@
 <template>
   <div v-if="loaded" class="providerList">
+    <el-card class="defaultModels" shadow="never" :bodyStyle="{ padding: '14px 16px' }">
+      <div class="defaultHeader">
+        <el-text tag="strong">默认模型</el-text>
+        <el-text size="small" type="info">新建的图片、视频生成节点和对话中的 AI，在未明确指定模型时使用这里的选择</el-text>
+      </div>
+      <div v-for="type in mediaModelTypes" :key="type" class="defaultRow">
+        <span class="defaultLabel">{{ mediaModelLabels[type] }}</span>
+        <el-select
+          :modelValue="mediaModelSelectValue(type)"
+          filterable
+          clearable
+          :placeholder="isMediaModelExpired(type) ? '原选择已失效，请重选' : `选择${mediaModelLabels[type]}`"
+          :aria-label="`默认${mediaModelLabels[type]}`"
+          noDataText="请先添加供应商和模型"
+          @update:modelValue="(value: string) => setDefaultMediaModel(type, value)">
+          <el-option-group v-for="provider in defaultGroups(type)" :key="provider.id" :label="provider.label">
+            <el-option v-for="item in provider.models" :key="item.modelId" :label="item.label" :value="JSON.stringify([item.providerId, item.modelId])" />
+          </el-option-group>
+        </el-select>
+      </div>
+    </el-card>
     <div class="itemList">
       <el-card v-for="item in sortedProviders" :key="item.fileName" class="providerItem" shadow="never">
         <div class="providerHeader">
@@ -43,12 +64,13 @@
 <script setup lang="ts">
 import axios from "axios";
 import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, ref, shallowRef, type Component } from "vue";
-import { ElMessage } from "element-plus";
+import { ElCard, ElMessage, ElOption, ElOptionGroup, ElSelect, ElText } from "element-plus";
 import { IconPlus, IconSettings, IconEdit, IconTrash, IconDownload } from "@tabler/icons-vue";
 import logoUrl from "@toonflow/assets/logo.svg";
 import type { MediaProvider } from "./types";
-import { settings, saveSettings } from "@/stores/settings";
-import { invalidateNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
+import { settings, saveSettings, mediaModelTypes, type MediaModelType } from "@/stores/settings";
+import { invalidateNodeModels, groupNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
+import { loadMediaModelOptions, mediaModelLabels, mediaModelOptionsOf, mediaModelSelectValue, isMediaModelExpired, setDefaultMediaModel } from "@/lib/mediaModels";
 import tfAccount from "../../tfAccount.vue";
 
 const { visible = true } = defineProps<{ visible?: boolean }>();
@@ -64,6 +86,14 @@ const editingProvider = ref<MediaProvider>();
 const deletingFile = ref("");
 const fetchingFile = ref("");
 let loadRequest = 0;
+
+function defaultGroups(type: MediaModelType) {
+  return groupNodeModels(mediaModelOptionsOf(type));
+}
+
+function refreshMediaModels() {
+  void loadMediaModelOptions().catch(() => ElMessage.error("读取媒体模型失败"));
+}
 
 function getProviderApiKey(id: string) {
   const configs = settings.value.mediaProviderConfigs as Record<string, { apiKey?: unknown }> | undefined;
@@ -86,6 +116,7 @@ function refreshInstalled(event: WindowEventMap["toonflow:plugin-installed"]) {
 }
 onMounted(() => {
   void loadProviders();
+  refreshMediaModels();
   window.addEventListener("toonflow:plugin-installed", refreshInstalled);
 });
 onBeforeUnmount(() => {
@@ -151,6 +182,7 @@ async function deleteProvider(provider: MediaProvider) {
       delete current[provider.id];
       return { mediaProviderConfigs: current };
     });
+    refreshMediaModels();
   } catch (error) {
     const message = axios.isAxiosError(error) ? error.response?.data?.message || error.message : error instanceof Error ? error.message : "删除失败，请重试";
     ElMessage.error(deleted ? `供应商已删除，连接配置未清理：${message}` : message);
@@ -162,6 +194,7 @@ function saveProviderItem(provider: MediaProvider) {
   const index = providers.value.findIndex(item => item.fileName === provider.fileName);
   if (index < 0) providers.value.push(provider);
   else providers.value.splice(index, 1, provider);
+  refreshMediaModels();
 }
 </script>
 

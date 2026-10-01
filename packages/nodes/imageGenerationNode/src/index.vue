@@ -189,10 +189,10 @@ function loadModels() {
   modelsRequest = ai.getMediaModels().then((items) => {
     if (generating.value || deleting.value) return;
     models.value = items.filter((item) => item.type === "image");
-    // ACT: 只给空配置选默认模型，保留暂时不可用的旧选择及其参数。
+    // ACT: 只给空配置选默认模型，保留暂时不可用的旧选择及其参数；用户默认模型失效时回退列表首个。
     if (!data.value.model) {
-      const first = models.value[0];
-      data.value.model = first ? JSON.stringify([first.providerId, first.modelId]) : "";
+      const choice = models.value.find((item) => item.isDefault) ?? models.value[0];
+      data.value.model = choice ? JSON.stringify([choice.providerId, choice.modelId]) : "";
     }
   }).finally(() => {
     modelsLoading.value = false;
