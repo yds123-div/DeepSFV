@@ -89,7 +89,7 @@ internal static class updateHelper
                 // 保持句柄，避免 PID 复用；仅等待当前安装的宿主，不终止其他进程。
                 IntPtr parentHandle = parent.Handle;
                 if (parent.HasExited || !inside(parent.MainModule.FileName, Path.Combine(root, "app", "bin")))
-                    throw new InvalidOperationException("父进程不属于当前 Toonflow 安装。");
+                    throw new InvalidOperationException("父进程不属于当前 DeepSFV 安装。");
                 using (var sha = SHA256.Create())
                     if (!String.Equals(BitConverter.ToString(sha.ComputeHash(archiveStream)).Replace("-", ""), expectedDigest, StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException("更新包 SHA-256 校验失败。");
@@ -108,7 +108,7 @@ internal static class updateHelper
                 while (!parent.WaitForExit(250))
                 {
                     if (!File.Exists(planPath)) throw new InvalidOperationException("更新已取消。");
-                    if (timer.Elapsed.TotalSeconds >= 60) throw new InvalidOperationException("Toonflow 未在 60 秒内退出，更新已取消。");
+                    if (timer.Elapsed.TotalSeconds >= 60) throw new InvalidOperationException("DeepSFV 未在 60 秒内退出，更新已取消。");
                 }
                 if (!File.Exists(planPath)) throw new InvalidOperationException("更新已取消。");
                 ensurePlainPath(root);
@@ -127,7 +127,7 @@ internal static class updateHelper
                 catch (Exception stateError) { error = new Exception(error.Message + "\n更新结果无法写入：" + stateError.Message); }
             }
             Console.Error.WriteLine(error.Message);
-            if (!quiet) MessageBox.Show(error.Message, "Toonflow 更新失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (!quiet) MessageBox.Show(error.Message, "DeepSFV 更新失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
         finally
@@ -239,7 +239,7 @@ internal static class updateHelper
         }))
         {
             if (process == null || (process.WaitForExit(1000) && process.ExitCode != 0))
-                throw new InvalidOperationException("更新后无法启动 Toonflow。");
+                throw new InvalidOperationException("更新后无法启动 DeepSFV。");
         }
     }
 
@@ -300,7 +300,7 @@ internal static class updateHelper
         {
             registry.SetValue("toonflowInstallDirectory", root);
             registry.SetValue("InstallLocation", root);
-            registry.SetValue("DisplayName", "Toonflow");
+            registry.SetValue("DisplayName", "DeepSFV");
             registry.SetValue("DisplayVersion", version);
             registry.SetValue("DisplayIcon", Path.Combine(root, "app", "Resources", "app.ico"));
             registry.SetValue("UninstallString", quote(uninstaller));

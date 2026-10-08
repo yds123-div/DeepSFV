@@ -86,6 +86,7 @@ declare module 'vue' {
     IconMovie: typeof import('@tabler/icons-vue')['IconMovie']
     IconSitemap: typeof import('@tabler/icons-vue')['IconSitemap']
     IconTextSize: typeof import('@tabler/icons-vue')['IconTextSize']
+    IconWorld: typeof import('@tabler/icons-vue')['IconWorld']
     IconX: typeof import('@tabler/icons-vue')['IconX']
     KeyInput: typeof import('./../components/settings/panels/general/keyInput.vue')['default']
     LanguageModel: typeof import('./../components/settings/panels/languageModel/index.vue')['default']

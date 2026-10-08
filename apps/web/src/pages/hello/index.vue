@@ -4,10 +4,10 @@
       <div v-if="view !== 'welcome'" class="providerContent">
         <header class="providerHeader">
           <el-button text :icon="IconArrowLeft" :disabled="saving" @click="view = 'welcome'">返回</el-button>
-          <h1 id="welcomeTitle">{{ view === "login" ? "登录 TF-Router" : "配置语言模型" }}</h1>
+          <h1 id="welcomeTitle">{{ view === "login" ? "登录" : "配置语言模型" }}</h1>
         </header>
         <div v-if="view === 'login'" v-loading="saving" class="loginBody" element-loading-text="正在配置文本模型和媒体模型…">
-          <iframe ref="loginFrame" class="loginFrame" :src="loginUrl" title="TF-Router 登录与注册" />
+          <iframe ref="loginFrame" class="loginFrame" :src="loginUrl" title="账号登录与注册" />
         </div>
         <div v-else class="providerBody">
           <languageModel />
@@ -27,11 +27,11 @@
       </div>
       <div v-else class="welcomeContent">
         <h1 id="welcomeTitle">快速开始</h1>
-        <p class="description">选择登录TF-Router可直接自动配置，无需任何复杂操作，即可开始创作。</p>
+        <p class="description">选择登录可直接自动配置文本与媒体模型，无需任何复杂操作，即可开始创作。</p>
 
         <el-button class="loginButton" type="primary" @click="openLogin">
           <icon-login class="buttonIcon" />
-          登录 TF-Router 自动配置
+          登录并自动配置
         </el-button>
         <div class="secondaryActions">
           <el-button class="secondaryButton" round @click="view = 'custom'">
@@ -44,14 +44,14 @@
       </div>
 
       <footer class="pageFooter">
-        <p>© {{ new Date().getFullYear() }} Toonflow · 保留所有权利。</p>
+        <p>© {{ new Date().getFullYear() }} DeepSFV · 保留所有权利。</p>
       </footer>
     </section>
     <div class="artPanel" aria-hidden="true">
       <bg class="artBg" />
       <div class="artBrand">
         <span class="artLogo" v-html="logoSvg" />
-        <span class="artName">Toonflow</span>
+        <span class="artName">DeepSFV</span>
       </div>
     </div>
   </main>

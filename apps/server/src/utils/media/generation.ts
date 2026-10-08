@@ -37,10 +37,21 @@ function defaultMediaModels() {
   }));
 }
 
+// ACT: 以 mediaProviderConfigs 是否填了 apiKey 判断供应商可用；当前所有媒体供应商都需要密钥，出现免密钥的本地供应商时改为按 provider.rules 判断。
+function configuredProviderIds() {
+  const configurations = record(record(conf.get("settings", {})).mediaProviderConfigs);
+  return new Set(Object.entries(configurations).flatMap(([id, value]) => {
+    const apiKey = record(value).apiKey;
+    return typeof apiKey === "string" && apiKey.trim() ? [id] : [];
+  }));
+}
+
 export async function listMediaModels(): Promise<MediaModel[]> {
   const installedProviders = await listMediaProviders();
   const defaults = defaultMediaModels();
-  return installedProviders.flatMap(provider => provider.models.flatMap(model => {
+  // ACT: 未配置密钥的供应商生成时必然报错，先从可选模型里剔除；设置面板仍保留其卡片以便补密钥。
+  const configured = configuredProviderIds();
+  return installedProviders.filter(provider => configured.has(provider.id)).flatMap(provider => provider.models.flatMap(model => {
     if (model.type !== "image" && model.type !== "video" && model.type !== "audio") return [];
     const builtIn = (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === model.id);
     const fallback = defaults.get(model.type);
