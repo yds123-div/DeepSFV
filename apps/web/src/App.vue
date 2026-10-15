@@ -17,11 +17,13 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, ref, shallowRef, watch, watchEffect } from "vue";
+import { onBeforeUnmount, onMounted, ref, shallowRef, watch, watchEffect } from "vue";
+import axios from "axios";
 import { ElMessage, useZIndex } from "element-plus";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { saveSettings, settings, uiSettings } from "@/stores/settings";
 import { desktopUpdateSnapshot } from "@/stores/desktopUpdate";
+import type { updateSnapshot } from "@toonflow/server/desktop";
 import { useMcpControl } from "@/lib/mcpControl";
 import ffmpegRequired from "@/components/settings/ffmpegRequired.vue";
 import updateBox from "@/components/updateBox.vue";
@@ -33,6 +35,14 @@ const updateBoxVisible = ref(false);
 const updateBoxBuild = shallowRef<{ version: string; hash: string }>();
 const shownUpdateBuilds = new Set<string>();
 const isDesktop = new URLSearchParams(window.location.search).get("desktop") === "1";
+
+onMounted(() => {
+  if (!isDesktop) return;
+  // ACT: 只读取本机版本信息用于更新说明，不检查远程更新源。
+  void axios.get<{ data: updateSnapshot }>("/api/desktop/update", { timeout: 10000 })
+    .then(({ data }) => { desktopUpdateSnapshot.value = data.data; })
+    .catch(() => {});
+});
 
 watch(desktopUpdateSnapshot, snapshot => {
   if (!isDesktop || !snapshot?.version || !snapshot.hash || snapshot.channel === "dev") return;

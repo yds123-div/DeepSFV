@@ -1,6 +1,6 @@
 import axios from "axios";
 import { ref } from "vue";
-import { defaultMediaModels, mediaModelTypes, updateDefaultMediaModel, type MediaModelType } from "@/stores/settings";
+import { defaultMediaModels, isHiddenCloudProvider, mediaModelTypes, updateDefaultMediaModel, type MediaModelType } from "@/stores/settings";
 
 export type MediaModelOption = { providerId: string; providerLabel: string; modelId: string; label: string; type: MediaModelType };
 export const mediaModelLabels: Record<MediaModelType, string> = { image: "图片模型", video: "视频模型", audio: "音频模型" };
@@ -12,7 +12,7 @@ export async function loadMediaModelOptions() {
     headers: { "x-toonflow-workspace": "1", "Cache-Control": "no-cache" },
   });
   if (data.code !== 200) throw new Error("读取媒体模型失败");
-  mediaModelOptions.value = data.data.filter(item => (mediaModelTypes as readonly string[]).includes(item.type));
+  mediaModelOptions.value = data.data.filter(item => (mediaModelTypes as readonly string[]).includes(item.type) && !isHiddenCloudProvider({ id: item.providerId }));
   return mediaModelOptions.value;
 }
 

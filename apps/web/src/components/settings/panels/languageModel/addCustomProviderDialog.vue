@@ -121,7 +121,6 @@ import {
 } from "@tabler/icons-vue";
 import { saveSettings, type CustomProvider, type CustomProviderModel } from "@/stores/settings";
 import { languageProviders } from "@toonflow/providers";
-import { isTfRouterProvider } from "@/lib/tf";
 
 const props = defineProps<{ provider?: CustomProvider }>();
 const visible = defineModel<boolean>({ default: false });
@@ -200,25 +199,6 @@ watch(visible, (value) => {
 }, { immediate: true });
 onBeforeUnmount(() => request?.abort());
 
-watch(
-  [visible, () => form.id, () => form.apiUrl, () => form.protocol, () => form.apiKey],
-  ([isVisible], _previous, onCleanup) => {
-    if (!isVisible || !isTfRouterProvider(form) || !form.apiKey.trim()) return;
-    modelRefreshPending.value = true;
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      try { await fetchModels(true); }
-      finally { if (!cancelled) modelRefreshPending.value = false; }
-    }, 500);
-    onCleanup(() => {
-      cancelled = true;
-      clearTimeout(timer);
-      request?.abort();
-      modelRefreshPending.value = false;
-    });
-  },
-);
-
 function resetForm() {
   Object.assign(form, { id: "", label: "", apiUrl: "", protocol: "openai-completions", apiKey: "" });
   models.value = [];
@@ -245,7 +225,7 @@ async function fetchModels(autoApply = false) {
     );
     if (controller.signal.aborted) return;
     if (data.code !== 200 || !Array.isArray(data.data)) throw new Error(data.message || "获取模型列表失败");
-    if (autoApply || isTfRouterProvider(form)) {
+    if (autoApply) {
       if (!data.data.length) throw new Error("未获取到可用模型，请检查 API Key 后重试");
       models.value = data.data.map((item: CustomProviderModel) => ({ ...item, key: crypto.randomUUID() }));
       return;
@@ -285,7 +265,7 @@ function addManualModel() {
 }
 
 async function addProvider() {
-  if (fetching.value || modelRefreshPending.value || (isTfRouterProvider(form) && modelFetchFailed.value)) return;
+  if (fetching.value || modelRefreshPending.value) return;
   formError.value = "";
   if (saving.value || !(await providerForm.value?.validate().catch(() => false))) return;
   const providerId = props.provider?.id;

@@ -19,8 +19,7 @@
           :disabled="saving"
           :aria-pressed="selectedProvider === item.id"
           @click="selectedProvider = item.id">
-          <img v-if="item.id === 'tfRouter'" class="providerLogo" :src="logoUrl" alt="" />
-          <modelIcon v-else :model="item.id" :size="18" />
+          <modelIcon :model="item.id" :size="18" />
           <span>{{ item.label }}</span>
         </button>
       </aside>
@@ -95,10 +94,8 @@ import { IconFileCode, IconCode, IconFolderOpen, IconCopy } from "@tabler/icons-
 import { ElMessage } from "element-plus";
 import { mediaProviders } from "@toonflow/providers";
 import { modelIcon } from "@toonflow/model-icons";
-import logoUrl from "@toonflow/assets/logo.svg";
 import messageMarkdown from "@/components/messageMarkdown.vue";
 import { invalidateNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
-import tfRouterSource from "@toonflow/providers/media/tfRouter?raw";
 import type { MediaProvider } from "./types";
 import { providerPrompt } from "./providerPrompt";
 import { saveSettings } from "@/stores/settings";
@@ -107,7 +104,7 @@ import { writeClipboardText } from "@/lib/clipboard";
 const { mode = "custom" } = defineProps<{ mode?: "builtin" | "custom" }>();
 const visible = defineModel<boolean>({ default: false });
 const emit = defineEmits<{ added: [provider: MediaProvider] }>();
-const providerSources: Record<string, string> = { tfRouter: tfRouterSource };
+const providerSources: Record<string, string> = {};
 const selectedProvider = ref<string>(mediaProviders[0]?.id ?? "");
 const activeProvider = computed(() => mediaProviders.find(provider => provider.id === selectedProvider.value));
 const models = computed(() => activeProvider.value?.models ?? []);
@@ -255,8 +252,6 @@ async function copyPrompt() {
         width: 18px;
         height: 18px;
         object-fit: contain;
-
-        .dark & { filter: invert(1); }
       }
     }
   }

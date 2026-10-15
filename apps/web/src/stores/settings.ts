@@ -105,9 +105,14 @@ export const privacySettings = computed(() => {
 
 export type CustomProviderModel = { id: string; label: string; contextWindow?: number; maxOutputTokens?: number };
 export type CustomProvider = { id: string; label: string; version?: string; apiUrl: string; apiKey: string; protocol: string; models: CustomProviderModel[] };
+export function isHiddenCloudProvider(item: { id?: unknown; apiUrl?: unknown }) {
+  if (typeof item.id === "string" && item.id.toLowerCase() === "tfrouter") return true;
+  return typeof item.apiUrl === "string" && URL.canParse(item.apiUrl) && new URL(item.apiUrl).hostname === "api.toonflow.net";
+}
 export const customProviders = computed<CustomProvider[]>(() => Array.isArray(settings.value.customProviders)
   ? settings.value.customProviders.filter((item): item is CustomProvider => !!item && typeof item.id === "string" && typeof item.label === "string" && Array.isArray(item.models)
-    && item.models.every((model: CustomProviderModel) => !!model && typeof model.id === "string" && typeof model.label === "string"))
+    && item.models.every((model: CustomProviderModel) => !!model && typeof model.id === "string" && typeof model.label === "string")
+    && !isHiddenCloudProvider(item))
   : []);
 
 export const modelChoices = computed(() => customProviders.value.flatMap(provider => provider.models.map(model => ({

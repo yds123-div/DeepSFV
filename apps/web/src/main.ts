@@ -13,7 +13,6 @@ import { registerDesktopProtocol } from "@/lib/desktopProtocol";
 import { registerDesktopDownloads } from "@/lib/saveFile";
 import { registerAnonymousData } from "@/lib/anonymousData";
 import { loadSettings, settingsStorage } from "@/stores/settings";
-import { checkDesktopUpdate } from "@/stores/desktopUpdate";
 
 const app = createApp(App);
 const isDesktop = new URLSearchParams(window.location.search).get("desktop") === "1";
@@ -50,8 +49,6 @@ async function notifyDesktopReady(failed = false) {
     await new Promise<void>((resolve) => window.addEventListener("load", () => resolve(), { once: true }));
   }
   await notifyDesktopReady();
-  // ACT: 桌面启动后只静默检查一次；失败留待用户手动重试，不阻塞启动或自动下载。
-  void checkDesktopUpdate(true).catch(() => {});
 }).catch(async (error) => {
   console.error("页面初始化失败：", error);
   if (isMounted) app.unmount();

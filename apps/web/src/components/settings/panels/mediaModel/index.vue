@@ -24,19 +24,14 @@
     <div class="itemList">
       <el-card v-for="item in sortedProviders" :key="item.fileName" class="providerItem" shadow="never">
         <div class="providerHeader">
-          <div v-if="item.id.toLowerCase() === 'tfrouter'" class="providerMark" aria-hidden="true">
-            <img class="providerLogo" :src="logoUrl" alt="" />
-          </div>
           <div class="providerInfo">
             <div class="providerHeading">
               <el-text class="providerName" tag="strong">{{ item.label }}</el-text>
-              <el-tag v-if="item.id.toLowerCase() === 'tfrouter'" size="small">官方</el-tag>
             </div>
             <el-text class="providerId" size="small" type="info" :title="item.fileName">{{ item.fileName }}</el-text>
           </div>
         </div>
         <el-alert v-if="item.loadError" :title="item.loadError" type="error" :closable="false" showIcon />
-        <tfAccount v-if="item.id.toLowerCase() === 'tfrouter'" :apiKey="getProviderApiKey(item.id)" :visible="visible" :saveApiKey="(key) => saveProviderApiKey(item.id, key)" />
         <div class="providerFooter">
           <div class="providerMeta">
             <el-tag v-if="item.version" size="small" type="info" effect="plain">v{{ item.version }}</el-tag>
@@ -53,7 +48,7 @@
       </el-card>
     </div>
     <div class="providerActions">
-      <el-button class="addButton" :icon="IconPlus" @click="openAdd('builtin')">添加供应商</el-button>
+      <el-button v-if="mediaProviders.length" class="addButton" :icon="IconPlus" @click="openAdd('builtin')">添加供应商</el-button>
       <el-button class="addButton" :icon="IconSettings" @click="openAdd('custom')">添加自定义供应商</el-button>
     </div>
     <component :is="mediaProviderDialog" v-model="providerDialogVisible" :mode="addMode" @added="saveProviderItem" />
@@ -66,18 +61,17 @@ import axios from "axios";
 import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, ref, shallowRef, type Component } from "vue";
 import { ElCard, ElMessage, ElOption, ElOptionGroup, ElSelect, ElText } from "element-plus";
 import { IconPlus, IconSettings, IconEdit, IconTrash, IconDownload } from "@tabler/icons-vue";
-import logoUrl from "@toonflow/assets/logo.svg";
 import type { MediaProvider } from "./types";
-import { settings, saveSettings, mediaModelTypes, type MediaModelType } from "@/stores/settings";
+import { settings, saveSettings, mediaModelTypes, isHiddenCloudProvider, type MediaModelType } from "@/stores/settings";
 import { invalidateNodeModels, groupNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
 import { loadMediaModelOptions, mediaModelLabels, mediaModelOptionsOf, mediaModelSelectValue, isMediaModelExpired, setDefaultMediaModel } from "@/lib/mediaModels";
-import tfAccount from "../../tfAccount.vue";
+import { mediaProviders } from "@toonflow/providers";
 
 const { visible = true } = defineProps<{ visible?: boolean }>();
 const mediaProviderDialog = shallowRef<Component>();
 const editProviderDialog = shallowRef<Component>();
 const providers = ref<MediaProvider[]>([]);
-const sortedProviders = computed(() => [...providers.value].sort((a, b) => Number(b.id.toLowerCase() === "tfrouter") - Number(a.id.toLowerCase() === "tfrouter")));
+const sortedProviders = computed(() => providers.value);
 const loaded = ref(false);
 const providerDialogVisible = ref(false);
 const editorVisible = ref(false);
@@ -93,22 +87,6 @@ function defaultGroups(type: MediaModelType) {
 
 function refreshMediaModels() {
   void loadMediaModelOptions().catch(() => ElMessage.error("读取媒体模型失败"));
-}
-
-function getProviderApiKey(id: string) {
-  const configs = settings.value.mediaProviderConfigs as Record<string, { apiKey?: unknown }> | undefined;
-  const apiKey = configs?.[id]?.apiKey;
-  return typeof apiKey === "string" ? apiKey : "";
-}
-
-async function saveProviderApiKey(id: string, key: string) {
-  await saveSettings(settings => {
-    const configs = settings.mediaProviderConfigs;
-    const current = configs && typeof configs === "object" && !Array.isArray(configs) ? configs as Record<string, unknown> : {};
-    const existing = current[id];
-    const config = existing && typeof existing === "object" && !Array.isArray(existing) ? existing as Record<string, unknown> : {};
-    return { mediaProviderConfigs: { ...current, [id]: { ...config, apiKey: key } } };
-  });
 }
 
 function refreshInstalled(event: WindowEventMap["toonflow:plugin-installed"]) {
@@ -128,7 +106,7 @@ async function loadProviders() {
   const request = ++loadRequest;
   try {
     const { data } = await axios.get<{ data: MediaProvider[] }>("/api/providers/media/list");
-    if (request === loadRequest) providers.value = data.data;
+    if (request === loadRequest) providers.value = data.data.filter(item => !isHiddenCloudProvider(item));
   } catch (error) {
     if (request === loadRequest) ElMessage.error(axios.isAxiosError(error) ? error.response?.data?.message || error.message : "读取媒体供应商失败");
   } finally {

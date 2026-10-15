@@ -2,9 +2,7 @@
   <el-container class="home">
     <bg class="pageBackground" />
     <el-header class="pageHeader">
-      <el-badge isDot :hidden="!hasDesktopUpdate">
-        <el-button round size="large" :icon="IconSettings" :aria-label="hasDesktopUpdate ? '设置，有新版本可用' : '设置'" @click="settingsVisible = true">设置</el-button>
-      </el-badge>
+      <el-button round size="large" :icon="IconSettings" aria-label="设置" @click="settingsVisible = true">设置</el-button>
     </el-header>
     <el-main class="pageContent">
       <section class="creationPanel" aria-label="创建项目">
@@ -86,9 +84,8 @@ import {
   IconTrash, IconFolderPlus, IconFolderOpen as iconFolderOpen,
 } from "@tabler/icons-vue";
 import modelPopover from "@/components/modelPopover.vue";
-import logoUrl from "@toonflow/assets/logo.svg";
+import logoUrl from "@toonflow/assets/logo.png";
 import { useWorkspaceStore, type Project } from "@/stores/workspace";
-import { hasDesktopUpdate } from "@/stores/desktopUpdate";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import settings from "@/components/settings/index.vue";
 import bg from "./bg.vue";
@@ -287,10 +284,6 @@ async function createProject(fromPrompt = true) {
         .brandLogo {
           width: 48px;
           height: 48px;
-
-          .dark & {
-            filter: invert(1);
-          }
         }
 
         h1 {
